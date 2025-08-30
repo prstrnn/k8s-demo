@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔍 Running pre-commit checks..."
+
+# Block committing generated infra/app.yaml
+if git diff --cached --name-only | grep -q '^infra/app.yaml$'; then
+  echo "❌ ERROR: You are trying to commit infra/app.yaml (generated)."
+  echo "   Only commit infra/app.yaml.tmpl."
+  exit 1
+fi
+
+# Look for placeholder tokens in staged files
+PLACEHOLDERS='<(postgres-password|postgres-ui-password|mongo-password|redis-password)>'
+
+if git diff --cached --name-only | grep -E '\.ya?ml$' | while read -r file; do
+  if git show ":$file" | grep -Eq "$PLACEHOLDERS"; then
+    echo "❌ ERROR: File $file still contains password placeholders."
+    echo "   Replace placeholders before committing."
+    exit 1
+  fi
+done; then
+  exit 1
+fi
+
+echo "✅ Pre-commit checks passed."
