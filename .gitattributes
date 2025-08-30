@@ -1,0 +1,17 @@
+# Ensure consistent line endings
+* text=auto eol=lf
+
+# Treat YAML as text (no diffs suppressed)
+*.yaml text
+*.yml  text
+
+# Scripts
+*.sh   text eol=lf
+
+# Systemd service templates
+*.service.tmpl text eol=lf
+
+# Explicitly mark binary files
+*.crt  binary
+*.key  binary
+*.pfx  binary

@@ -29,5 +29,5 @@ kind-data/
 kind-cluster/
 
 # === Systemd unit (generated) ===
-# The installed systemd service (we keep only the .tmpl in repo)
+# The installed systemd service (keep only the .tmpl in repo)
 infra/k8s-dashboard.service
