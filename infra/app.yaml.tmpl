@@ -1,0 +1,522 @@
+# =========================
+# NAMESPACE
+# =========================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-demo
+
+---
+# =========================
+# POSTGRES
+# =========================
+
+# --- Secret: Postgres credentials ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: k8s-demo
+type: Opaque
+stringData:
+  POSTGRES_DB: mydb
+  POSTGRES_USER: myuser
+  POSTGRES_PASSWORD: <postgres-password>
+
+---
+# --- PVC: Postgres data ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: k8s-demo
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# --- Deployment: Postgres ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: k8s-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          readinessProbe:
+            tcpSocket: { port: 5432 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 5432 }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+# --- Service: Postgres (cluster-internal) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-svc
+  namespace: k8s-demo
+spec:
+  type: ClusterIP
+  selector: { app: postgres }
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+
+---
+# =========================
+# PGADMIN (Postgres UI)
+# =========================
+
+# --- Secret: pgAdmin initial login ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pgadmin-secret
+  namespace: k8s-demo
+type: Opaque
+stringData:
+  PGADMIN_DEFAULT_EMAIL: admin@example.com
+  PGADMIN_DEFAULT_PASSWORD: <postgres-ui-password>
+
+---
+# --- ConfigMap: Auto-register pgAdmin servers (imported on first run) ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgadmin-servers
+  namespace: k8s-demo
+data:
+  servers.json: |
+    {
+      "Servers": {
+        "1": {
+          "Name": "postgres",
+          "Group": "Servers",
+          "Host": "postgres-svc.k8s-demo.svc.cluster.local",
+          "Port": 5432,
+          "MaintenanceDB": "mydb",
+          "Username": "myuser",
+          "SSLMode": "prefer",
+          "ConnectNow": false
+        }
+      }
+    }
+
+---
+# --- PVC: pgAdmin data (persists settings & saved passwords) ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pgadmin-pvc
+  namespace: k8s-demo
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# --- Deployment: pgAdmin 4 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: k8s-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: pgadmin }
+  template:
+    metadata:
+      labels: { app: pgadmin }
+    spec:
+      containers:
+        - name: pgadmin
+          image: dpage/pgadmin4:9.7
+          ports:
+            - containerPort: 80
+          envFrom:
+            - secretRef:
+                name: pgadmin-secret
+          env:
+            # Optional quality-of-life settings
+            - name: PGADMIN_DISABLE_POSTFIX
+              value: "true"
+            - name: PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED
+              value: "False"
+          volumeMounts:
+            - name: pgadmin-data
+              mountPath: /var/lib/pgadmin
+            # Mount servers.json for auto-import on first run
+            - name: pgadmin-servers
+              mountPath: /pgadmin4/servers.json
+              subPath: servers.json
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet: { path: "/", port: 80 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: "/", port: 80 }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+      volumes:
+        - name: pgadmin-data
+          persistentVolumeClaim:
+            claimName: pgadmin-pvc
+        - name: pgadmin-servers
+          configMap:
+            name: pgadmin-servers
+
+---
+# --- Service: pgAdmin (HTTP, cluster-internal by default) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin-svc
+  namespace: k8s-demo
+spec:
+  type: ClusterIP
+  selector: { app: pgadmin }
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+
+---
+# --- Ingress (requires an Ingress Controller like NGINX) ---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pgadmin-ing
+  namespace: k8s-demo
+spec:
+  ingressClassName: nginx
+  rules:
+    # - host: pgadmin.local
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pgadmin-svc
+                port:
+                  number: 80
+  # tls:
+  #   - hosts: [ "pgadmin.local" ]
+  #     secretName: pgadmin-tls
+
+---
+
+# =========================
+# Mongo DB
+# =========================
+
+# --- Secret: Mongo credentials ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-secret
+  namespace: k8s-demo
+type: Opaque
+stringData:
+  MONGO_INITDB_ROOT_USERNAME: mongoadmin
+  MONGO_INITDB_ROOT_PASSWORD: <mongo-password>
+
+---
+# --- PVC: Mongo data ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+  namespace: k8s-demo
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# --- Service: stable DNS for StatefulSet pods (Headless) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: k8s-demo
+spec:
+  clusterIP: None    # headless service for stable pod DNS
+  ports:
+    - port: 27017
+      targetPort: 27017
+  selector:
+    app: mongo
+
+---
+# --- StatefulSet: Mongo ---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  namespace: k8s-demo
+spec:  
+  selector:
+    matchLabels:
+      app: mongo
+  serviceName: mongo
+  replicas: 1 # by default is 1
+  minReadySeconds: 10 # by default is 0
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      securityContext:
+        fsGroup: 999       # ensures /data/db is writable by mongodb user
+      containers:
+        - name: mongo
+          image: mongo:8.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          envFrom:
+            - secretRef:
+                name: mongo-secret
+          readinessProbe:
+            tcpSocket:
+              port: 27017
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 27017
+            initialDelaySeconds: 2
+            periodSeconds: 10
+      volumes:
+        - name: mongo-data
+          persistentVolumeClaim:
+            claimName: mongo-pvc
+
+---
+
+# =========================
+# Redis DB
+# =========================
+
+# --- Secret: Redis credentials ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-secret
+  namespace: k8s-demo
+type: Opaque
+stringData:
+  REDIS_PASSWORD: <redis-password>
+
+---
+# --- ConfigMap: redis.conf ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: k8s-demo
+data:
+  redis.conf: |
+    # Core config
+    bind 0.0.0.0
+    protected-mode yes
+    port 6379
+
+    # Persistence (AOF recommended for dev/low-risk prod)
+    appendonly yes
+    appendfsync everysec
+    dir /data
+
+    # Memory policy example (tune as needed)
+    # maxmemory 256mb
+    # maxmemory-policy allkeys-lru
+    save 900 1
+    save 300 10
+    save 60 10000
+
+---
+# --- PVC: Redis data ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: k8s-demo
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# --- Service: stable DNS for StatefulSet pods (Headless) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: k8s-demo
+spec:
+  clusterIP: None    # headless service for stable pod DNS
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis
+
+---
+# --- ClusterIP Service: in-cluster access point ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-svc
+  namespace: k8s-demo
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+
+---
+# --- StatefulSet: Redis ---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: k8s-demo
+spec:
+  serviceName: redis
+  replicas: 1 # by default is 1
+  minReadySeconds: 5 # by default is 0
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: redis
+          image: redis:8-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+            - name: redis-config
+              mountPath: /usr/local/etc/redis/redis.conf
+              subPath: redis.conf
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+        
+          envFrom:
+            - secretRef:
+                name: redis-secret
+
+          # Generate a tiny include file with the password at startup,
+          # then launch redis-server with both configs.
+          command: ["/bin/sh","-lc"]
+          args:
+            - |
+              set -e
+              exec redis-server /usr/local/etc/redis/redis.conf
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -lc
+                - 'redis-cli ping | grep -q PONG'
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -lc
+                - 'redis-cli ping | grep -q PONG'
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 6
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-pvc
+        - name: redis-config
+          configMap:
+            name: redis-config
+            items:
+              - key: redis.conf
+                path: redis.conf
+
+---
+
+    
