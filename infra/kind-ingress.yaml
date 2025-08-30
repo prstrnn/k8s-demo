@@ -1,0 +1,12 @@
+# kind-ingress.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 80    # ingress-nginx HTTP inside kind
+        hostPort: 8080       # host port to expose to LAN
+        protocol: TCP
+      - containerPort: 443   # ingress-nginx HTTPS inside kind
+        hostPort: 8443
+        protocol: TCP

@@ -1,0 +1,33 @@
+# === General ===
+.DS_Store
+*.log
+*.tmp
+*.bak
+*.swp
+
+# === Kubernetes infra ===
+# Generated manifests (from templates)
+infra/app.yaml
+
+# Any kubeconfigs you might dump here
+kubeconfig*
+*.kubeconfig
+
+# kubectl cache dirs
+.kube/
+
+# === Secrets ===
+# Don’t commit secret files
+*.secret
+*.secrets
+*.key
+*.crt
+
+# === Kind / Docker ===
+# Kind state (if you ever persist it here)
+kind-data/
+kind-cluster/
+
+# === Systemd unit (generated) ===
+# The installed systemd service (we keep only the .tmpl in repo)
+infra/k8s-dashboard.service

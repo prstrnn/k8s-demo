@@ -1,0 +1,14 @@
+# /etc/systemd/system/k8s-dashboard.service
+[Unit]
+Description=Kubernetes Dashboard port-forward
+After=network.target docker.service
+
+[Service]
+User=__USER__
+Environment=KUBECONFIG=/home/__USER__/.kube/config
+ExecStart=/usr/local/bin/kubectl -n kubernetes-dashboard port-forward --address=0.0.0.0 svc/kubernetes-dashboard 9443:443
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
