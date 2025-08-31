@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ======================
+# Git hooks (shareable pre-commit)
+# ======================
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HOOKS_DIR="${REPO_ROOT}/.githooks"
+PRECOMMIT="${HOOKS_DIR}/pre-commit"
+
+chmod +x "${PRECOMMIT}"
+
+# Point this repo to use .githooks (idempotent)
+git config core.hooksPath ".githooks"
+echo "✅ Git hooks path set to .githooks (pre-commit installed)"
+
 # === Settings you can tweak ===
 CLUSTER_NAME="dev"
 INFRA_DIR="$(cd ./infra && pwd)"

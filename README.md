@@ -89,18 +89,18 @@ Use kubectl or the Dashboard to explore pods, services, ingresses
 Git hooks prevent committing real secrets or generated files
 
 ## 🗺 Architecture (high level)
-    ```mermaid
-    flowchart TD
-        A[Browser / Client] -->|HTTP/HTTPS| B["Host machine<br>(LAN IP ports 8080/9443)"]
-        B --> C["kind cluster (Docker container)"]
-        C --> D[Ingress-NGINX controller]
-        D --> E1[pgAdmin Service → Pod]
-        D --> E2[Postgres Service → Pod]
-        D --> E3[MongoDB Service → StatefulSet Pod]
-        D --> E4[Redis Service → StatefulSet Pod]
-        B --> F[Systemd port-forward 9443]
-        F --> G[Kubernetes Dashboard Service → Pod]
-    ```
+```mermaid
+flowchart TD
+    A[Browser / Client] -->|HTTP/HTTPS| B["Host machine<br>(LAN IP ports 8080/9443)"]
+    B --> C["kind cluster (Docker container)"]
+    C --> D[Ingress-NGINX controller]
+    D --> E1[pgAdmin Service → Pod]
+    D --> E2[Postgres Service → Pod]
+    D --> E3[MongoDB Service → StatefulSet Pod]
+    D --> E4[Redis Service → StatefulSet Pod]
+    B --> F[Systemd port-forward 9443]
+    F --> G[Kubernetes Dashboard Service → Pod]
+```
 External clients connect to your host machine LAN IP (e.g. 192.168.1.x:8080).
 
 Traffic is forwarded into the kind cluster → ingress-nginx → services/pods.
