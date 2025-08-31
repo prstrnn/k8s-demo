@@ -66,15 +66,15 @@ This installs kubectl and kind (if missing), creates the cluster, installs ingre
 ## 🔑 Secrets & passwords
 infra/app.yaml.tmpl uses placeholders:
 
-    ```yaml
-    <postgres-password>
+```yaml
+<postgres-password>
 
-    <postgres-ui-password>
+<postgres-ui-password>
 
-    <mongo-password>
+<mongo-password>
 
-    <redis-password>
-    ```
+<redis-password>
+```
 
 The bootstrap.sh script replaces these with generated or user-supplied passwords before applying.
 The generated infra/app.yaml is gitignored and should never be committed.
