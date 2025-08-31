@@ -38,42 +38,43 @@ scripts/
    - [Docker Engine Install Docs](https://docs.docker.com/engine/install/)
 
 2. **Clone this repo**  
-   ```bash
-   git clone https://github.com/yourname/k8s-demo.git
-   cd k8s-demo
-   ```
+    ```bash
+    git clone https://github.com/yourname/k8s-demo.git
+    cd k8s-demo
+    ```
  
 3. **Run the bootstrap script**
 This installs kubectl and kind (if missing), creates the cluster, installs ingress, Dashboard, generates secrets, and applies your manifests.```
-```bash
-scripts/bootstrap.sh
-```
+    ```bash
+    chmod +x bootstrap.sh
+    ./bootstrap.sh
+    ```
 4. **Access Kubernetes Dashboard**
 
-The script installs a systemd unit (k8s-dashboard.service) which runs a port-forward on 9443 → 443.
+    The script installs a systemd unit (k8s-dashboard.service) which runs a port-forward on 9443 → 443.
 
-Open: https://localhost:9443 (or https://<HOST-LAN-IP>:9443 from another machine).
+    Open: https://localhost:9443 (or https://<HOST-LAN-IP>:9443 from another machine).
 
-Login using the token printed at the end of bootstrap.sh.
+    Login using the token printed at the end of bootstrap.sh.
 
 5. **Access pgAdmin**
 
-Via ingress at the mapped host port (see infra/kind-ingress.yaml).
+    Via ingress at the mapped host port (see infra/kind-ingress.yaml).
 
-Example: http://localhost:8080
+    Example: http://localhost:8080
 
 ## 🔑 Secrets & passwords
 infra/app.yaml.tmpl uses placeholders:
 
-```yaml
-<postgres-password>
+    ```yaml
+    <postgres-password>
 
-<postgres-ui-password>
+    <postgres-ui-password>
 
-<mongo-password>
+    <mongo-password>
 
-<redis-password>
-```
+    <redis-password>
+    ```
 
 The bootstrap.sh script replaces these with generated or user-supplied passwords before applying.
 The generated infra/app.yaml is gitignored and should never be committed.
@@ -88,18 +89,18 @@ Use kubectl or the Dashboard to explore pods, services, ingresses
 Git hooks prevent committing real secrets or generated files
 
 ## 🗺 Architecture (high level)
-```mermaid
-flowchart TD
-    A[Browser / Client] -->|HTTP/HTTPS| B["Host machine<br>(LAN IP ports 8080/9443)"]
-    B --> C["kind cluster (Docker container)"]
-    C --> D[Ingress-NGINX controller]
-    D --> E1[pgAdmin Service → Pod]
-    D --> E2[Postgres Service → Pod]
-    D --> E3[MongoDB Service → StatefulSet Pod]
-    D --> E4[Redis Service → StatefulSet Pod]
-    B --> F[Systemd port-forward 9443]
-    F --> G[Kubernetes Dashboard Service → Pod]
-```
+    ```mermaid
+    flowchart TD
+        A[Browser / Client] -->|HTTP/HTTPS| B["Host machine<br>(LAN IP ports 8080/9443)"]
+        B --> C["kind cluster (Docker container)"]
+        C --> D[Ingress-NGINX controller]
+        D --> E1[pgAdmin Service → Pod]
+        D --> E2[Postgres Service → Pod]
+        D --> E3[MongoDB Service → StatefulSet Pod]
+        D --> E4[Redis Service → StatefulSet Pod]
+        B --> F[Systemd port-forward 9443]
+        F --> G[Kubernetes Dashboard Service → Pod]
+    ```
 External clients connect to your host machine LAN IP (e.g. 192.168.1.x:8080).
 
 Traffic is forwarded into the kind cluster → ingress-nginx → services/pods.
