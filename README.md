@@ -12,7 +12,7 @@ The cluster runs several common services:
 - **Kubernetes Dashboard** (web UI for managing the cluster)  
 - **ingress-nginx** (for routing HTTP traffic into the cluster)  
 
-All manifests and scripts are under the [`infra/`](infra/) and [`scripts/`](scripts/) folders.
+All manifests are under the [`infra/`](infra/) folder. Bootstrap script is in root folder of the repository.
 
 ---
 
@@ -80,13 +80,10 @@ The bootstrap.sh script replaces these with generated or user-supplied passwords
 The generated infra/app.yaml is gitignored and should never be committed.
 
 ## 🛠 Development workflow
-Manifests live in infra/*.tmpl
-
-Run scripts/bootstrap.sh to (re)deploy
-
-Use kubectl or the Dashboard to explore pods, services, ingresses
-
-Git hooks prevent committing real secrets or generated files
+1. Manifests live in infra/*.tmpl
+2. Run ./bootstrap.sh to (re)deploy
+3. Use kubectl or the Dashboard to explore pods, services, ingresses 
+4. Git hooks prevent committing real secrets or generated files
 
 ## 🗺 Architecture (high level)
 ```mermaid
