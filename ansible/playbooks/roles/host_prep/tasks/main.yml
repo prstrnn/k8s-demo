@@ -1,0 +1,96 @@
+# --- PREP & CLEANUP ----------------------------------------------------------
+- name: Create apt keyrings dir
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Remove any old Docker repo files (avoids Signed-By conflicts)
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/docker.list
+    - /etc/apt/sources.list.d/docker.list.save
+    - /etc/apt/sources.list.d/download_docker_com_linux_ubuntu.list
+  # If you previously added docker to /etc/apt/sources.list, strip those lines:
+- name: Remove docker.com entries from /etc/apt/sources.list (if present)
+  lineinfile:
+    path: /etc/apt/sources.list
+    regexp: '^deb .+download\.docker\.com/linux/ubuntu'
+    state: absent
+  register: removed_main_list
+  failed_when: false
+
+# --- KEYRING -----------------------------------------------------------------
+- name: Install Docker GPG key (keyring)
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+  # (Modern Docker docs use dearmored .gpg; .asc works the same as long as mode is 0644)
+
+# --- REPOSITORY --------------------------------------------------------------
+- name: Add Docker apt repository (single canonical entry with Signed-By)
+  apt_repository:
+    repo: "deb [arch={{ (ansible_architecture == 'aarch64') | ternary('arm64','amd64') }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+    filename: docker
+    state: present
+    update_cache: yes
+
+# --- INSTALL -----------------------------------------------------------------
+- name: Unhold docker/containerd packages (if previously held)
+  shell: |
+    set -e
+    for p in docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; do
+      apt-mark unhold "$p" >/dev/null 2>&1 || true
+    done
+  changed_when: false
+
+- name: Remove Ubuntu docker.io/containerd (avoid conflicts)
+  apt:
+    name:
+      - docker.io
+      - containerd
+    state: absent
+    purge: true
+
+- name: Install Docker Engine from Docker repo
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Enable & start Docker
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+
+- name: Install kubectl if missing
+  shell: |
+    set -e
+    ARCH="$(uname -m)"; case "$ARCH" in x86_64|amd64) A=amd64;; aarch64|arm64) A=arm64;; *) echo "Unsupported arch: $ARCH"; exit 1;; esac
+    KARCH="$A"
+    KVER="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
+    curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${KVER}/bin/linux/${KARCH}/kubectl"
+    chmod +x /usr/local/bin/kubectl
+  args: { creates: /usr/local/bin/kubectl }
+
+- name: Install kind if missing
+  shell: |
+    set -e
+    KIND_VER="v0.23.0"
+    ARCH="$(uname -m)"; case "$ARCH" in x86_64|amd64) A=amd64;; aarch64|arm64) A=arm64;; *) echo "Unsupported arch: $ARCH"; exit 1;; esac
+    KARCH="$A"
+    echo "$ARCH" "$KARCH" >> /home/aperesto/arch.txt
+    curl -fsSL -o /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/${KIND_VER}/kind-linux-${KARCH}"
+    curl -fsSL -o ~/kind-linux-${KARCH} "https://kind.sigs.k8s.io/dl/${KIND_VER}/kind-linux-${KARCH}"
+    chmod +x /usr/local/bin/kind
+  args: { creates: /usr/local/bin/kind }

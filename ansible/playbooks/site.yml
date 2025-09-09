@@ -1,0 +1,54 @@
+- name: Kubernetes demo – all-in Ansible
+  hosts: demo
+  become: true
+
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+    PATH: "/usr/local/bin:/usr/bin:{{ ansible_env.PATH | default('') }}"
+
+  # Prompts (no `when:` allowed here)
+  vars_prompt:
+    - name: postgres_password_input
+      prompt: "Postgres password (leave empty to auto-generate)"
+      private: true
+      default: ""
+    - name: postgres_ui_password_input
+      prompt: "pgAdmin password (leave empty to auto-generate)"
+      private: true
+      default: ""
+    - name: mongo_password_input
+      prompt: "MongoDB password (leave empty to auto-generate)"
+      private: true
+      default: ""
+    - name: redis_password_input
+      prompt: "Redis password (leave empty to auto-generate)"
+      private: true
+      default: ""
+
+  pre_tasks:
+    # If a value was provided, use it; otherwise generate a strong one.
+    - name: Derive/generate secrets
+      set_fact:
+        postgres_password: >-
+          {{ (postgres_password_input | trim)
+             if (postgres_password_input | trim) != '' else
+             (postgres_password | default(lookup('password','/dev/null', length=20, chars='ascii_letters,digits'))) }}
+        postgres_ui_password: >-
+          {{ (postgres_ui_password_input | trim)
+             if (postgres_ui_password_input | trim) != '' else
+             (postgres_ui_password | default(lookup('password','/dev/null', length=20, chars='ascii_letters,digits'))) }}
+        mongo_password: >-
+          {{ (mongo_password_input | trim)
+             if (mongo_password_input | trim) != '' else
+             (mongo_password | default(lookup('password','/dev/null', length=20, chars='ascii_letters,digits'))) }}
+        redis_password: >-
+          {{ (redis_password_input | trim)
+             if (redis_password_input | trim) != '' else
+             (redis_password | default(lookup('password','/dev/null', length=20, chars='ascii_letters,digits'))) }}
+
+  roles:
+    - host_prep
+    - kind_cluster
+    - ingress
+    - k8s_dashboard
+    - app_rollout

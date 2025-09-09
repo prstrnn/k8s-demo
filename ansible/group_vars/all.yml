@@ -1,0 +1,19 @@
+# Cluster & paths
+cluster_name: "dev"
+infra_dir: "{{ playbook_dir }}/../../infra"
+kind_config: "{{ infra_dir }}/kind-ingress.yaml"
+# kubeconfig_path: "{{ lookup('env','HOME') + '/.kube/config' }}"
+kube_user: "{{ lookup('env','SUDO_USER') or lookup('env','USER') }}"
+kubeconfig_path: "/home/{{ kube_user }}/.kube/config"
+
+# Dashboard PF (systemd) port
+dashboard_host_port: 9443
+
+# Which user should run the systemd port-forward
+dashboard_user: "{{ lookup('env','SUDO_USER') or lookup('env','USER') }}"
+
+# Passwords (auto-generated if not passed in)
+postgres_password: "{{ lookup('password', '/dev/null', length=20, chars='ascii_letters,digits') }}"
+postgres_ui_password: "{{ lookup('password', '/dev/null', length=20, chars='ascii_letters,digits') }}"
+mongo_password: "{{ lookup('password', '/dev/null', length=20, chars='ascii_letters,digits') }}"
+redis_password: "{{ lookup('password', '/dev/null', length=20, chars='ascii_letters,digits') }}"

@@ -1,0 +1,63 @@
+- name: Check Kubernetes Dashboard namespace
+  shell: "kubectl get ns kubernetes-dashboard"
+  register: dash_ns
+  failed_when: false
+  changed_when: false
+
+- name: Install Kubernetes Dashboard
+  shell: |
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+  when: dash_ns.rc != 0
+
+- name: Wait for dashboard rollout
+  shell: "kubectl -n kubernetes-dashboard rollout status deploy/kubernetes-dashboard --timeout=300s"
+
+# Check if the SA exists (never fail/never mark changed)
+- name: Check admin SA
+  command: kubectl -n kubernetes-dashboard get sa admin-user
+  register: sa_get
+  failed_when: false
+  changed_when: false
+  environment: { KUBECONFIG: "{{ kubeconfig_path }}" }
+
+# Create only if missing; mark changed when we actually created it
+- name: Create admin SA if missing
+  command: kubectl -n kubernetes-dashboard create serviceaccount admin-user
+  when: sa_get.rc != 0
+  register: sa_create
+  changed_when: true
+  environment: { KUBECONFIG: "{{ kubeconfig_path }}" }
+
+# Check if the CRB exists (never fail / never mark changed)
+- name: Check ClusterRoleBinding admin-user-binding
+  command: kubectl get clusterrolebinding admin-user-binding
+  register: crb_get
+  failed_when: false
+  changed_when: false
+  environment: { KUBECONFIG: "{{ kubeconfig_path }}" }
+
+# Create only if missing; marked changed when it actually runs
+- name: Create ClusterRoleBinding admin-user-binding (if missing)
+  command: >
+    kubectl create clusterrolebinding admin-user-binding
+    --clusterrole=cluster-admin
+    --serviceaccount=kubernetes-dashboard:admin-user
+  when: crb_get.rc != 0
+  register: crb_create
+  changed_when: true
+  environment: { KUBECONFIG: "{{ kubeconfig_path }}" }
+
+- name: Template systemd unit for port-forward
+  template:
+    src: k8s-dashboard.service.j2
+    dest: /etc/systemd/system/k8s-dashboard.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Enable & restart k8s-dashboard service
+  systemd:
+    name: k8s-dashboard.service
+    enabled: true
+    state: restarted
+    daemon_reload: true

@@ -1,0 +1,13 @@
+[Unit]
+Description=Kubernetes Dashboard port-forward
+After=network.target docker.service
+
+[Service]
+User={{ dashboard_user }}
+Environment=KUBECONFIG={{ kubeconfig_path }}
+ExecStart=/usr/local/bin/kubectl -n kubernetes-dashboard port-forward --address=0.0.0.0 svc/kubernetes-dashboard {{ dashboard_host_port }}:443
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

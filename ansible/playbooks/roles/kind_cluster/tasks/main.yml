@@ -1,0 +1,15 @@
+- name: Check if kind cluster exists
+  shell: "kind get clusters | grep -x {{ cluster_name }}"
+  register: kind_exists
+  failed_when: false
+  changed_when: false
+
+- name: Create kind cluster
+  shell: "kind create cluster --name {{ cluster_name }} --config {{ kind_config }}"
+  when: kind_exists.rc != 0
+
+- name: Wait for kube-system pods ready (best effort)
+  shell: "kubectl wait -n kube-system --for=condition=Ready pods --all --timeout=180s"
+  register: wait_core
+  failed_when: false
+  changed_when: false

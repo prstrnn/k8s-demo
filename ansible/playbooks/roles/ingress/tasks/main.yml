@@ -1,0 +1,13 @@
+- name: Check ingress-nginx namespace
+  shell: "kubectl get ns ingress-nginx"
+  register: ing_ns
+  failed_when: false
+  changed_when: false
+
+- name: Install ingress-nginx (kind)
+  shell: |
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+  when: ing_ns.rc != 0
+
+- name: Wait for ingress controller rollout
+  shell: "kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=300s"

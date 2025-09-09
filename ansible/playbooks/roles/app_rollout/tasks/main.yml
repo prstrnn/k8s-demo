@@ -1,0 +1,23 @@
+- name: Render app manifest from template
+  template:
+    src: app.yaml.j2
+    dest: "{{ infra_dir }}/app.yaml"
+    mode: '0600'
+  vars:
+    pg_pass: "{{ postgres_password }}"
+    pgadmin_pass: "{{ postgres_ui_password }}"
+    mongo_pass: "{{ mongo_password }}"
+    redis_pass: "{{ redis_password }}"
+
+- name: Apply app manifest
+  shell: "kubectl apply -f {{ infra_dir }}/app.yaml"
+
+- name: Print Dashboard token (for convenience)
+  shell: "kubectl -n kubernetes-dashboard create token admin-user"
+  register: dash_token
+  changed_when: false
+  failed_when: false
+
+- name: Show token
+  debug:
+    msg: "Dashboard token: {{ dash_token.stdout | default('Run: kubectl -n kubernetes-dashboard create token admin-user') }}"
