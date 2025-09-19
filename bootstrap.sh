@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ======================
-# Git hooks (shareable pre-commit)
-# ======================
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-HOOKS_DIR="${REPO_ROOT}/.githooks"
-PRECOMMIT="${HOOKS_DIR}/pre-commit"
-
-chmod +x "${PRECOMMIT}"
-
 # Point this repo to use .githooks (idempotent)
 git config core.hooksPath ".githooks"
 echo "✅ Git hooks path set to .githooks (pre-commit installed)"
@@ -76,7 +67,7 @@ fi
 
 # Check infra files
 [[ -f "$KIND_CFG" ]] || die "Missing ${KIND_CFG}"
-[[ -f "$APP_MANIFEST" ]] || die "Missing ${APP_MANIFEST}"
+[[ -f "$APP_TMPL" ]] || die "Missing ${APP_TMPL}"
 [[ -f "$UNIT_TMPL" ]] || warn "No ${UNIT_TMPL} found (systemd unit is optional)"
 
 # Create kind cluster if needed
@@ -191,7 +182,7 @@ sed -e "s|<postgres-password>|${POSTGRES_PASS}|g" \
     -e "s|<postgres-ui-password>|${PGADMIN_PASS}|g" \
     -e "s|<mongo-password>|${MONGO_PASS}|g" \
     -e "s|<redis-password>|${REDIS_PASS}|g" \
-    "$APP_TMPL" > "$APP_OUT"
+    "$APP_TMPL" > "$APP_MANIFEST"
 
 # Apply your app
 say "Applying ${APP_MANIFEST} ..."
