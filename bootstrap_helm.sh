@@ -81,6 +81,12 @@ warn "You can run manually: kubectl -n kubernetes-dashboard port-forward svc/kub
 fi
 
 say "Applying admin-user via Helm chart..."
+# Hacks for GHA
+kubectl label namespace kubernetes-dashboard app.kubernetes.io/managed-by=Helm --overwrite
+kubectl annotate namespace kubernetes-dashboard meta.helm.sh/release-name=dashboard-admin --overwrite
+kubectl annotate namespace kubernetes-dashboard meta.helm.sh/release-namespace=kubernetes-dashboard --overwrite
+
+
 helm upgrade --install dashboard-admin "${INFRA_DIR}/dashboard" --namespace kubernetes-dashboard
 
 }
