@@ -1,0 +1,34 @@
+namespace: k8s-demo
+
+postgres:
+  image: postgres:15
+  storage: 5Gi
+  db: mydb
+  user: myuser
+
+pgadmin:
+  image: dpage/pgadmin4:9.7
+  email: admin@example.com
+  storage: 1Gi
+  ingress:
+    enabled: true
+    className: nginx
+mongo:
+  image: mongo:8.0
+  storage: 1Gi
+  user: mongoadmin
+
+redis:
+  image: redis:8-alpine
+  storage: 2Gi
+
+secrets:
+  postgres:
+    password: ""
+  mongo:
+    password: ""
+  redis:
+    password: ""
+  pgadmin:
+    password: ""
+

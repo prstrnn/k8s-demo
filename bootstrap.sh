@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Point this repo to use .githooks (idempotent)
-git config core.hooksPath ".githooks"
-echo "✅ Git hooks path set to .githooks (pre-commit installed)"
-
 # === Settings you can tweak ===
 CLUSTER_NAME="dev"
 INFRA_DIR="$(cd ./infra && pwd)"
@@ -115,6 +111,7 @@ DASH_NS="kubernetes-dashboard"
 DASH_SVC="kubernetes-dashboard"
 DASH_DEP="kubernetes-dashboard"
 DASH_INSTALLED=false
+DASHBOARD_VER="v2.7.0"
 
 if kubectl get ns "${DASH_NS}" >/dev/null 2>&1; then
   if kubectl -n "${DASH_NS}" get deploy "${DASH_DEP}" >/dev/null 2>&1; then
