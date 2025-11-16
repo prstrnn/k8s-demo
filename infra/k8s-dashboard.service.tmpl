@@ -6,7 +6,7 @@ After=network.target docker.service
 [Service]
 User=__USER__
 Environment=KUBECONFIG=/home/__USER__/.kube/config
-ExecStart=/usr/local/bin/kubectl -n kubernetes-dashboard port-forward --address=0.0.0.0 svc/kubernetes-dashboard 9443:443
+ExecStart=kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
 Restart=always
 RestartSec=10
 

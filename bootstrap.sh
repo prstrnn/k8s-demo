@@ -115,6 +115,7 @@ DASH_NS="kubernetes-dashboard"
 DASH_SVC="kubernetes-dashboard"
 DASH_DEP="kubernetes-dashboard"
 DASH_INSTALLED=false
+DASHBOARD_VER="v2.7.0"
 
 if kubectl get ns "${DASH_NS}" >/dev/null 2>&1; then
   if kubectl -n "${DASH_NS}" get deploy "${DASH_DEP}" >/dev/null 2>&1; then
