@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Point this repo to use .githooks (idempotent)
-git config core.hooksPath ".githooks"
-echo "Git hooks path set to .githooks (pre-commit installed)"
-
 # === Settings you can tweak ===
 CLUSTER_NAME="dev"
 INFRA_DIR="$(cd ./infra && pwd)"
