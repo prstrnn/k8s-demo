@@ -27,4 +27,5 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Run bootstrap.sh
+        working-directory: ${{ github.workspace }}
         run: ./bootstrap_heml.sh
