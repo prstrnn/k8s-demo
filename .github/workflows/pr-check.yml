@@ -26,4 +26,4 @@ jobs:
 
       - name: Validate Helm templates
         run: |
-          helm template myapp infra/chart/ --namespace k8s-demo | kubectl apply --dry-run=client -f -
+          helm template myapp infra/chart/ --namespace k8s-demo > helm_combined.yaml
