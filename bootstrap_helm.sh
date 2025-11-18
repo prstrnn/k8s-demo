@@ -67,8 +67,6 @@ say "Installing systemd unit for Dashboard port-forward (8443:443)..."
 # render template → systemd location (use sudo for system path)
 sudo sh -c "sed -e 's|__USER__|${RUN_AS_USER}|g' '${UNIT_TMPL}' > '${UNIT_OUT}'"
 
-# Substitute full path to kubectl if the unit uses a generic name (optional robustness)
-KBIN="$(command -v kubectl)"
 # Ensure ExecStart points to a valid kubectl; if not, user can edit their unit file
 sudo systemctl daemon-reload
 sudo systemctl enable k8s-dashboard.service
@@ -81,6 +79,12 @@ warn "You can run manually: kubectl -n kubernetes-dashboard port-forward svc/kub
 fi
 
 say "Applying admin-user via Helm chart..."
+# Hacks for GHA
+kubectl label namespace kubernetes-dashboard app.kubernetes.io/managed-by=Helm --overwrite
+kubectl annotate namespace kubernetes-dashboard meta.helm.sh/release-name=dashboard-admin --overwrite
+kubectl annotate namespace kubernetes-dashboard meta.helm.sh/release-namespace=kubernetes-dashboard --overwrite
+
+
 helm upgrade --install dashboard-admin "${INFRA_DIR}/dashboard" --namespace kubernetes-dashboard
 
 }
