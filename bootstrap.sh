@@ -108,7 +108,6 @@ fi
 # Kubernetes Dashboard — CHECK BEFORE INSTALL
 # ======================
 DASH_NS="kubernetes-dashboard"
-DASH_SVC="kubernetes-dashboard"
 DASH_DEP="kubernetes-dashboard"
 DASH_INSTALLED=false
 DASHBOARD_VER="v2.7.0"
@@ -155,8 +154,6 @@ if [[ -f "$UNIT_TMPL" ]]; then
   # render template → systemd location (use sudo for system path)
   sudo sh -c "sed -e 's|__USER__|${RUN_AS_USER}|g' '${UNIT_TMPL}' > '${UNIT_OUT}'"
 
-  # Substitute full path to kubectl if the unit uses a generic name (optional robustness)
-  KBIN="$(command -v kubectl)"
   # Ensure ExecStart points to a valid kubectl; if not, user can edit their unit file
   sudo systemctl daemon-reload
   sudo systemctl enable k8s-dashboard.service
